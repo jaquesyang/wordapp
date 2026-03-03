@@ -65,7 +65,7 @@ class Word(Base):
     phonetic = Column(String(500))
     chinese_definition = Column(String(500))
     mark = Column(String(500))
-    page = Column(Integer)
+    page = Column(Integer, nullable=True)
 
 
 # 获取数据库会话

@@ -366,7 +366,7 @@ export function WriteWordsPage() {
                       htmlFor={`write-unit-${unit.unit}`}
                       className="cursor-pointer text-card-foreground"
                     >
-                      Unit {unit.unit} - {unit.name} ({unit.word_count} 个单词)
+                      {unit.name} ({unit.word_count} 个单词)
                     </Label>
                   </div>
                 ))}
@@ -450,7 +450,8 @@ export function WriteWordsPage() {
               </p>
             )}
             <p className="text-sm text-muted-foreground">
-              Unit {currentWord.unit} - 第 {currentWord.page} 页
+              {units?.find((u) => u.unit === currentWord.unit)?.name || `Unit ${currentWord.unit}`}
+              {currentWord.page && ` - 第 ${currentWord.page} 页`}
             </p>
           </CardContent>
         </Card>

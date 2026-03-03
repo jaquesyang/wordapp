@@ -143,7 +143,7 @@ export function LearnWordsPage() {
             <Card key={unitNum}>
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg text-card-foreground">
-                  Unit {unitNum} - {unitName}
+                  {unitName}
                   <span className="ml-2 text-sm font-normal text-muted-foreground">
                     ({unitWords.length} 个单词)
                   </span>

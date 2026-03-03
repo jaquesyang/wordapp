@@ -512,7 +512,7 @@ export function DictationPage() {
                       htmlFor={`dictation-unit-${unit.unit}`}
                       className="cursor-pointer text-card-foreground"
                     >
-                      Unit {unit.unit} - {unit.name} ({unit.word_count} 个单词)
+                      {unit.name} ({unit.word_count} 个单词)
                     </Label>
                   </div>
                 ))}
