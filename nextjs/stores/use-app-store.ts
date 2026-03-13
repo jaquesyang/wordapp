@@ -2,8 +2,8 @@
  * 应用全局状态管理
  */
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import type { UserSettings, AudioType, ThemeType, FeatureModule } from "../types";
+import { persist, createJSONStorage } from "zustand/middleware";
+import type { UserSettings, AudioType, ThemeType, FeatureModule, Grade } from "@/types";
 
 /** 默认用户设置 */
 const defaultSettings: UserSettings = {
@@ -50,6 +50,9 @@ interface AppState {
 
   // 重置设置
   resetSettings: () => void;
+
+  // 获取年级数据
+  fetchGrades: () => Promise<Grade[]>;
 }
 
 /**
@@ -144,15 +147,23 @@ export const useAppStore = create<AppState>()(
 
       // 重置设置
       resetSettings: () => set({ settings: defaultSettings }),
+
+      // 获取年级数据
+      fetchGrades: async () => {
+        const res = await fetch('/api/grades');
+        if (!res.ok) throw new Error('Failed to fetch grades');
+        return res.json();
+      },
     }),
     {
       name: "wordapp-storage",
+      storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         settings: state.settings,
       }),
       // 在存储恢复后应用主题
       onRehydrateStorage: () => (state) => {
-        if (state) {
+        if (state && typeof window !== "undefined") {
           applyTheme(state.settings.theme);
         }
       },
