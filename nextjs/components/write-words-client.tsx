@@ -31,7 +31,7 @@ interface WriteWordsClientProps {
 }
 
 export function WriteWordsClient({ grade, units }: WriteWordsClientProps) {
-  const { settings, setNavigationConfirmationDisabled } = useAppStore();
+  const { settings, setNavigationConfirmationDisabled, setCurrentModule } = useAppStore();
   const [selectedUnits, setSelectedUnits] = useState<number[]>([]);
   const [isSetup, setIsSetup] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -61,6 +61,14 @@ export function WriteWordsClient({ grade, units }: WriteWordsClientProps) {
     setNavigationConfirmationDisabled(isSetup || showResults);
     return () => setNavigationConfirmationDisabled(false);
   }, [isSetup, showResults, setNavigationConfirmationDisabled]);
+
+  // 设置当前模块
+  useEffect(() => {
+    setCurrentModule('write');
+    return () => {
+      setCurrentModule(null);
+    };
+  }, [setCurrentModule]);
 
   // 获取单词列表
   const getWordList = async () => {

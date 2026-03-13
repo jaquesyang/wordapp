@@ -53,6 +53,8 @@ export interface UserSettings {
   dictationWordInterval: number;
   // 听写等待时间（秒）
   dictationWaitTime: number;
+  // 校对单词间隔时间（秒）
+  checkingWordInterval: number;
   // 字母朗读间隔时间（秒）
   letterInterval: number;
   // 读单词时是否显示音标

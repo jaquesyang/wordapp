@@ -25,12 +25,19 @@ interface LearnWordsClientProps {
 }
 
 export function LearnWordsClient({ grade, totalWords, children }: LearnWordsClientProps) {
-  const { settings, setAudioType, setCurrentGrade } = useAppStore();
+  const { settings, setAudioType, setCurrentGrade, setCurrentModule } = useAppStore();
   const [playingWord, setPlayingWord] = useState<number | null>(null);
 
   useEffect(() => {
     setCurrentGrade(grade);
   }, [grade, setCurrentGrade]);
+
+  useEffect(() => {
+    setCurrentModule('learn');
+    return () => {
+      setCurrentModule(null);
+    };
+  }, [setCurrentModule]);
 
   // 播放单词发音
   const playWord = async (word: Word) => {

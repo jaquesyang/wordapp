@@ -16,7 +16,7 @@ interface DictationClientProps {
 }
 
 export function DictationClient({ grade, units }: DictationClientProps) {
-  const { settings, updateSettings, setNavigationConfirmationDisabled } = useAppStore();
+  const { settings, updateSettings, setNavigationConfirmationDisabled, setCurrentModule } = useAppStore();
 
   // 设置状态
   const [selectedUnits, setSelectedUnits] = useState<number[]>([]);
@@ -56,6 +56,14 @@ export function DictationClient({ grade, units }: DictationClientProps) {
     setNavigationConfirmationDisabled(isSetup || checkingMode);
     return () => setNavigationConfirmationDisabled(false);
   }, [isSetup, checkingMode, setNavigationConfirmationDisabled]);
+
+  // 设置当前模块
+  useEffect(() => {
+    setCurrentModule('dictation');
+    return () => {
+      setCurrentModule(null);
+    };
+  }, [setCurrentModule]);
 
   // 获取单词列表
   const getWordList = async () => {
@@ -268,65 +276,57 @@ export function DictationClient({ grade, units }: DictationClientProps) {
     handleReset();
   };
 
-  // 播放单个字母（Web Speech API）
+  // 播放单个字母（使用本地 mp3 文件）
   const playLetter = (letter: string): Promise<void> => {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       if (shouldStopRef.current || isPaused) {
         resolve();
         return;
       }
 
-      if (!('speechSynthesis' in window)) {
+      const audioUrl = `/audio/${letter.toLowerCase()}.mp3`;
+
+      // 停止之前的音频
+      if (currentAudioRef.current) {
+        currentAudioRef.current.pause();
+        currentAudioRef.current.currentTime = 0;
+      }
+
+      const audio = new Audio(audioUrl);
+      currentAudioRef.current = audio;
+
+      const onEnded = () => {
+        cleanup();
+        resolve();
+      };
+
+      const onError = () => {
+        cleanup();
+        reject(new Error('字母音频播放失败'));
+      };
+
+      const cleanup = () => {
+        audio.removeEventListener('ended', onEnded);
+        audio.removeEventListener('error', onError);
+        if (currentAudioRef.current === audio) {
+          currentAudioRef.current = null;
+        }
+      };
+
+      audio.addEventListener('ended', onEnded);
+      audio.addEventListener('error', onError);
+
+      // 检查是否应该停止
+      if (shouldStopRef.current || isPaused) {
+        cleanup();
         resolve();
         return;
       }
 
-      const utterance = new SpeechSynthesisUtterance(letter);
-      utterance.lang = 'en-US';
-      utterance.rate = 0.8;
-      utterance.volume = 1.0;
-      utterance.pitch = 1.2;
-
-      // 尝试获取更好的女声
-      const voices = window.speechSynthesis.getVoices();
-      const preferredVoices = [
-        'Google US English',
-        'Microsoft Zira',
-        'Microsoft Aria',
-        'Samantha',
-        'Victoria',
-        'Fiona',
-      ];
-
-      for (const preferred of preferredVoices) {
-        const voice = voices.find((v) => v.name.includes(preferred));
-        if (voice) {
-          utterance.voice = voice;
-          break;
-        }
-      }
-
-      if (!utterance.voice) {
-        const femaleVoice = voices.find(
-          (v) =>
-            v.lang.startsWith('en') &&
-            (v.name.includes('Female') || v.name.includes('female') || v.name.includes('Zira') || v.name.includes('Aria'))
-        );
-        if (femaleVoice) {
-          utterance.voice = femaleVoice;
-        }
-      }
-
-      utterance.onend = () => resolve();
-      utterance.onerror = () => resolve();
-
-      window.speechSynthesis.speak(utterance);
-
-      // 超时处理
-      setTimeout(() => {
-        window.speechSynthesis.cancel();
-        resolve();
-      }, 3000);
+      audio.play().catch((err) => {
+        cleanup();
+        reject(err);
+      });
     });
   };
 
@@ -338,8 +338,8 @@ export function DictationClient({ grade, units }: DictationClientProps) {
 
     if (isPaused) return;
 
-    // 再逐字母朗读
-    const letters = word.word.split('');
+    // 再逐字母朗读（只播放字母，忽略非字母字符）
+    const letters = word.word.split('').filter(char => /[a-zA-Z]/.test(char));
     for (const letter of letters) {
       if (shouldStopRef.current || isPaused) return;
       await playLetter(letter);
@@ -373,7 +373,7 @@ export function DictationClient({ grade, units }: DictationClientProps) {
 
         // 单词之间等待
         if (i < wordList.length - 1) {
-          const waitTime = settings.dictationWaitTime * 1000;
+          const waitTime = settings.checkingWordInterval * 1000;
           await waitWithPauseCheck(waitTime);
         }
       } catch (error) {
@@ -622,6 +622,29 @@ export function DictationClient({ grade, units }: DictationClientProps) {
                     onClick={() =>
                       updateSettings({ letterInterval: Math.round((settings.letterInterval + 0.1) * 10) / 10 })
                     }
+                  >
+                    +
+                  </Button>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <Label className="text-card-foreground">校对单词间隔</Label>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      settings.checkingWordInterval > 1 &&
+                      updateSettings({ checkingWordInterval: settings.checkingWordInterval - 1 })
+                    }
+                  >
+                    -
+                  </Button>
+                  <span className="w-16 text-center text-card-foreground">{settings.checkingWordInterval} 秒</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => updateSettings({ checkingWordInterval: settings.checkingWordInterval + 1 })}
                   >
                     +
                   </Button>

@@ -15,7 +15,7 @@ interface ReadWordsClientProps {
 }
 
 export function ReadWordsClient({ grade, units }: ReadWordsClientProps) {
-  const { settings, setNavigationConfirmationDisabled } = useAppStore();
+  const { settings, setNavigationConfirmationDisabled, setCurrentModule } = useAppStore();
   const [selectedUnits, setSelectedUnits] = useState<number[]>([]);
   const [isSetup, setIsSetup] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -35,6 +35,14 @@ export function ReadWordsClient({ grade, units }: ReadWordsClientProps) {
     setNavigationConfirmationDisabled(isSetup);
     return () => setNavigationConfirmationDisabled(false);
   }, [isSetup, setNavigationConfirmationDisabled]);
+
+  // 设置当前模块
+  useEffect(() => {
+    setCurrentModule('read');
+    return () => {
+      setCurrentModule(null);
+    };
+  }, [setCurrentModule]);
 
   // 生成随机单词列表
   const handleStart = async () => {

@@ -268,7 +268,7 @@ export function DictationPage() {
     handleReset();
   };
 
-  // 播放单个字母（Web Speech API）
+  // 播放单个字母（使用本地 mp3 文件）
   const playLetter = (letter: string): Promise<void> => {
     return new Promise((resolve, reject) => {
       if (shouldStopRef.current || isPaused) {
@@ -276,59 +276,49 @@ export function DictationPage() {
         return;
       }
 
-      if (!("speechSynthesis" in window)) {
-        reject(new Error("浏览器不支持语音合成"));
+      const audioUrl = `/audio/${letter.toLowerCase()}.mp3`;
+
+      // 停止之前的音频
+      if (currentAudioRef.current) {
+        currentAudioRef.current.pause();
+        currentAudioRef.current.currentTime = 0;
+      }
+
+      const audio = new Audio(audioUrl);
+      currentAudioRef.current = audio;
+
+      const onEnded = () => {
+        cleanup();
+        resolve();
+      };
+
+      const onError = () => {
+        cleanup();
+        reject(new Error("字母音频播放失败"));
+      };
+
+      const cleanup = () => {
+        audio.removeEventListener('ended', onEnded);
+        audio.removeEventListener('error', onError);
+        if (currentAudioRef.current === audio) {
+          currentAudioRef.current = null;
+        }
+      };
+
+      audio.addEventListener('ended', onEnded);
+      audio.addEventListener('error', onError);
+
+      // 检查是否应该停止
+      if (shouldStopRef.current || isPaused) {
+        cleanup();
+        resolve();
         return;
       }
 
-      const utterance = new SpeechSynthesisUtterance(letter);
-      utterance.lang = "en-US";
-      utterance.rate = 0.8;
-      utterance.volume = 1.0; // 最大音量
-      utterance.pitch = 1.2; // 稍微提高音调，使声音更清晰
-
-      // 尝试获取更好的女声
-      const voices = window.speechSynthesis.getVoices();
-      // 优先选择常见的高质量女声
-      const preferredVoices = [
-        "Google US English",       // Google 女声
-        "Microsoft Zira",          // Windows Zira 女声
-        "Microsoft Aria",          // Windows Aria 女声
-        "Samantha",                // macOS Samantha 女声
-        "Victoria",                // macOS Victoria 女声
-        "Fiona",                   // macOS Fiona 女声
-      ];
-
-      // 查找首选语音
-      for (const preferred of preferredVoices) {
-        const voice = voices.find(v => v.name.includes(preferred));
-        if (voice) {
-          utterance.voice = voice;
-          break;
-        }
-      }
-
-      // 如果没找到，尝试查找任何包含 "Female" 的语音
-      if (!utterance.voice) {
-        const femaleVoice = voices.find(v =>
-          v.lang.startsWith("en") &&
-          (v.name.includes("Female") || v.name.includes("female") || v.name.includes("Zira") || v.name.includes("Aria"))
-        );
-        if (femaleVoice) {
-          utterance.voice = femaleVoice;
-        }
-      }
-
-      utterance.onend = () => resolve();
-      utterance.onerror = () => resolve(); // 出错也继续
-
-      window.speechSynthesis.speak(utterance);
-
-      // 超时处理
-      setTimeout(() => {
-        window.speechSynthesis.cancel();
-        resolve();
-      }, 3000);
+      audio.play().catch((err) => {
+        cleanup();
+        reject(err);
+      });
     });
   };
 
@@ -340,8 +330,8 @@ export function DictationPage() {
 
     if (isPaused) return;
 
-    // 再逐字母朗读
-    const letters = word.word.split("");
+    // 再逐字母朗读（只播放字母，忽略非字母字符）
+    const letters = word.word.split("").filter(char => /[a-zA-Z]/.test(char));
     for (const letter of letters) {
       if (shouldStopRef.current || isPaused) return;
       await playLetter(letter);
@@ -375,7 +365,7 @@ export function DictationPage() {
 
         // 单词之间等待
         if (i < wordList.length - 1) {
-          const waitTime = settings.dictationWaitTime * 1000;
+          const waitTime = settings.checkingWordInterval * 1000;
           await waitWithPauseCheck(waitTime);
         }
       } catch (error) {
@@ -605,6 +595,26 @@ export function DictationPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => updateSettings({ letterInterval: Math.round((settings.letterInterval + 0.1) * 10) / 10 })}
+                    >
+                      +
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label className="text-card-foreground">校对单词间隔</Label>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => settings.checkingWordInterval > 1 && updateSettings({ checkingWordInterval: settings.checkingWordInterval - 1 })}
+                    >
+                      -
+                    </Button>
+                    <span className="w-16 text-center text-card-foreground">{settings.checkingWordInterval} 秒</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => updateSettings({ checkingWordInterval: settings.checkingWordInterval + 1 })}
                     >
                       +
                     </Button>

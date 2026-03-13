@@ -13,6 +13,7 @@ const defaultSettings: UserSettings = {
   audioType: "uk",
   dictationWordInterval: 2,
   dictationWaitTime: 5,
+  checkingWordInterval: 2,
   letterInterval: 0.5,
   showPhonetic: true,
   showChinese: true,
@@ -35,6 +36,7 @@ interface AppState {
   setAudioType: (type: AudioType) => void;
   setDictationWordInterval: (interval: number) => void;
   setDictationWaitTime: (time: number) => void;
+  setCheckingWordInterval: (interval: number) => void;
   setLetterInterval: (interval: number) => void;
   setShowPhonetic: (show: boolean) => void;
   setShowChinese: (show: boolean) => void;
@@ -110,6 +112,11 @@ export const useAppStore = create<AppState>()(
       setDictationWaitTime: (time) =>
         set((state) => ({
           settings: { ...state.settings, dictationWaitTime: time },
+        })),
+
+      setCheckingWordInterval: (interval) =>
+        set((state) => ({
+          settings: { ...state.settings, checkingWordInterval: interval },
         })),
 
       setLetterInterval: (interval) =>

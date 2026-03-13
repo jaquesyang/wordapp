@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAppStore } from '@/stores/use-app-store';
 import { BookOpen, Settings, ChevronLeft, Check } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -14,6 +14,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -28,8 +36,11 @@ const moduleNames: Record<string, string> = {
 
 export function Layout({ children }: LayoutProps) {
   const pathname = usePathname();
-  const { settings, setTheme } = useAppStore();
+  const router = useRouter();
+  const { settings, setTheme, navigationConfirmationDisabled } = useAppStore();
   const [grades, setGrades] = useState<any[]>([]);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<'grade' | 'module' | null>(null);
 
   // Load grades data on mount
   useEffect(() => {
@@ -63,6 +74,41 @@ export function Layout({ children }: LayoutProps) {
   // 是否在模块页
   const isModulePage = pathname?.includes('/module/');
 
+  // 处理年级按钮点击
+  const handleGradeClick = () => {
+    // 如果禁用了确认对话框，或不在功能页面，直接跳转
+    if (navigationConfirmationDisabled || !isModulePage) {
+      router.push('/');
+    } else {
+      // 在功能页面且需要确认，显示确认对话框
+      setPendingNavigation('grade');
+      setShowConfirmDialog(true);
+    }
+  };
+
+  // 处理返回模块按钮点击
+  const handleModuleClick = () => {
+    // 如果禁用了确认对话框，直接返回
+    if (navigationConfirmationDisabled) {
+      router.push(`/grade/${settings.currentGrade}`);
+    } else {
+      // 在练习过程中，显示确认对话框
+      setPendingNavigation('module');
+      setShowConfirmDialog(true);
+    }
+  };
+
+  // 确认导航
+  const confirmNavigation = () => {
+    setShowConfirmDialog(false);
+    if (pendingNavigation === 'grade') {
+      router.push('/');
+    } else if (pendingNavigation === 'module') {
+      router.push(`/grade/${settings.currentGrade}`);
+    }
+    setPendingNavigation(null);
+  };
+
   return (
     <>
       <div className="min-h-screen bg-background">
@@ -79,27 +125,25 @@ export function Layout({ children }: LayoutProps) {
                   </div>
                 </Link>
                 {currentGradeName && !isHomePage && (
-                  <Link href="/">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-sm font-medium hover:bg-primary/10 hover:text-primary hover:border-primary transition-colors"
-                    >
-                      {currentGradeName}
-                    </Button>
-                  </Link>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleGradeClick}
+                    className="text-sm font-medium hover:bg-primary/10 hover:text-primary hover:border-primary transition-colors"
+                  >
+                    {currentGradeName}
+                  </Button>
                 )}
                 {isModulePage && (
-                  <Link href={`/grade/${settings.currentGrade}`}>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 hover:bg-accent text-foreground"
-                      title="返回模块选择"
-                    >
-                      <ChevronLeft className="h-5 w-5" />
-                    </Button>
-                  </Link>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleModuleClick}
+                    className="h-8 w-8 hover:bg-accent text-foreground"
+                    title="返回模块选择"
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </Button>
                 )}
               </div>
 
@@ -149,6 +193,26 @@ export function Layout({ children }: LayoutProps) {
           {children}
         </main>
       </div>
+
+      {/* 确认对话框 */}
+      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-foreground">确认返回</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              返回后将丢失当前的学习进度，确定要返回吗？
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowConfirmDialog(false)}>
+              取消
+            </Button>
+            <Button variant="destructive" onClick={confirmNavigation}>
+              确认返回
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
