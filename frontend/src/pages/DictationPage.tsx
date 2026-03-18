@@ -234,7 +234,8 @@ export function DictationPage() {
   // 暂停/继续
   const handlePauseResume = () => {
     if (isPaused) {
-      // 继续
+      // 继续 - 立即更新ref以确保startPlayback/checking能正常执行
+      isPausedRef.current = false;
       setIsPaused(false);
       setIsPlaying(true);
       shouldStopRef.current = false;
