@@ -1,6 +1,5 @@
 import { getUnits } from '@/lib/db';
 import { WriteWordsClient } from '@/components/write-words-client';
-import type { Unit } from '@/types';
 
 interface PageProps {
   searchParams: Promise<{ grade?: string }>;

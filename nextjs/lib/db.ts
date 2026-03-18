@@ -37,7 +37,7 @@ export function getUnits(grade: string): Unit[] {
     GROUP BY u.grade, u.unit
     ORDER BY u.unit
   `);
-  const results = stmt.all(grade) as any[];
+  const results = stmt.all(grade) as { grade: string; unit: string; name: string; word_count: number }[];
   return results.map(r => ({ ...r, unit: Number(r.unit) }));
 }
 
@@ -46,7 +46,7 @@ export function getUnits(grade: string): Unit[] {
  */
 export function getWords(grade: string, unit?: number): Word[] {
   let sql = 'SELECT id, word, grade, unit, phonetic, chinese_definition, mark, page FROM word WHERE grade = ?';
-  const params: any[] = [grade];
+  const params: (string | number)[] = [grade];
 
   if (unit !== undefined) {
     sql += ' AND unit = ?';

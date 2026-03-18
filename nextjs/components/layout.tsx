@@ -6,6 +6,7 @@ import { useAppStore } from '@/stores/use-app-store';
 import { BookOpen, Settings, ChevronLeft, Check } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import type { Grade } from '@/types';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,7 +39,7 @@ export function Layout({ children }: LayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { settings, setTheme, navigationConfirmationDisabled } = useAppStore();
-  const [grades, setGrades] = useState<any[]>([]);
+  const [grades, setGrades] = useState<Grade[]>([]);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<'grade' | 'module' | null>(null);
 

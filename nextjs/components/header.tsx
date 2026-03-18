@@ -54,7 +54,7 @@ export function Header() {
                   </label>
                   <NativeSelect
                     value={settings.theme}
-                    onChange={(e) => setTheme(e.target.value as any)}
+                    onChange={(e) => setTheme(e.target.value as 'green' | 'blue' | 'orange' | 'dark')}
                     className="w-full"
                   >
                     <option value="green">绿色</option>

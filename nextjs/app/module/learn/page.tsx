@@ -2,7 +2,7 @@ import { getWords, getUnits, getGrades } from '@/lib/db';
 import { Card, CardContent } from '@/components/ui/card';
 import { LearnWordsClient } from '@/components/learn-words-client';
 import { LearnWordsTable } from '@/components/learn-words-table';
-import type { Word, Unit, Grade } from '@/types';
+import type { Word } from '@/types';
 
 // 将单词按单元分组
 function groupWordsByUnit(words: Word[]): Record<number, Word[]> {

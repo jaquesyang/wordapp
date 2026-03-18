@@ -1,4 +1,3 @@
-import { getUnits } from '@/lib/db';
 import { Card, CardContent } from '@/components/ui/card';
 import { SetGradeClient } from '@/components/set-grade-client';
 import { BookOpen, Eye, PenTool, Ear } from 'lucide-react';

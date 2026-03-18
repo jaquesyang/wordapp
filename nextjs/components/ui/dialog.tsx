@@ -25,11 +25,11 @@ export function Dialog({ open = false, onOpenChange, children }: DialogProps) {
   );
 }
 
-export function DialogTrigger({ children, asChild = false, ...props }: any) {
+export function DialogTrigger({ children, asChild = false, ...props }: { asChild?: boolean; children: React.ReactNode; [key: string]: unknown }) {
   const { onOpenChange } = React.useContext(DialogContext);
 
   if (asChild && React.isValidElement(children)) {
-    return React.cloneElement(children as React.ReactElement<any>, {
+    return React.cloneElement(children as React.ReactElement<Record<string, unknown>>, {
       ...props,
       onClick: () => onOpenChange(true),
     });

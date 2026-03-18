@@ -31,7 +31,7 @@ interface WriteWordsClientProps {
 }
 
 export function WriteWordsClient({ grade, units }: WriteWordsClientProps) {
-  const { settings, setNavigationConfirmationDisabled, setCurrentModule } = useAppStore();
+  const { setNavigationConfirmationDisabled, setCurrentModule } = useAppStore();
   const [selectedUnits, setSelectedUnits] = useState<number[]>([]);
   const [isSetup, setIsSetup] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);

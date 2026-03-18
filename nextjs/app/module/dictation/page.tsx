@@ -1,6 +1,5 @@
 import { getUnits } from '@/lib/db';
 import { DictationClient } from '@/components/dictation-client';
-import type { Unit } from '@/types';
 
 interface PageProps {
   searchParams: Promise<{ grade?: string }>;

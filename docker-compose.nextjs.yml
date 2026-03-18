@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile
     container_name: wordapp-nextjs
     ports:
-      - "3000:3000"
+      - "8100:3000"
     volumes:
       - ./wordapp.db:/wordapp.db
     environment:

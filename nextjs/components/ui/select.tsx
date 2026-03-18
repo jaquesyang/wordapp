@@ -23,7 +23,7 @@ function useSelectContext() {
 
 // Root Select component
 const Select = React.forwardRef<
-  HTMLButtonElement,
+  HTMLDivElement,
   {
     children: React.ReactNode;
     value?: string;

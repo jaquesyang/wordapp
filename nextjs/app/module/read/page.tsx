@@ -1,6 +1,5 @@
 import { getUnits } from '@/lib/db';
 import { ReadWordsClient } from '@/components/read-words-client';
-import type { Unit } from '@/types';
 
 interface PageProps {
   searchParams: Promise<{ grade?: string }>;
