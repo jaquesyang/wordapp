@@ -122,7 +122,6 @@ export function Layout({ children }: LayoutProps) {
                 <Link href="/">
                   <div className="flex items-center gap-2 cursor-pointer">
                     <BookOpen className="h-5 w-5 text-primary" />
-                    {!isHomePage && <span className="text-lg font-bold text-foreground">单词学习</span>}
                   </div>
                 </Link>
                 {currentGradeName && !isHomePage && (

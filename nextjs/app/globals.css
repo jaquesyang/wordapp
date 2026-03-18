@@ -47,21 +47,6 @@
     --input: 217.2 32.6% 17.5%;
     --ring: 142 76% 36%;
   }
-
-  /* 主题变量 */
-  .theme-green {
-    --primary: 142 76% 36%;
-  }
-
-  .theme-blue {
-    --primary: 217 91% 60%;
-    --ring: 217 91% 60%;
-  }
-
-  .theme-orange {
-    --primary: 24 95% 53%;
-    --ring: 24 95% 53%;
-  }
 }
 
 @layer base {
@@ -71,6 +56,21 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* 主题变量 */
+.theme-green {
+  --primary: 142 76% 36%;
+}
+
+.theme-blue {
+  --primary: 217 91% 60%;
+  --ring: 217 91% 60%;
+}
+
+.theme-orange {
+  --primary: 24 95% 53%;
+  --ring: 24 95% 53%;
 }
 
 /* Dropdown menu animation */

@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronLeft, Play, Pause, RotateCcw, Volume2, List } from "lucide-react";
 import type { Word } from "@/types";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 export function DictationPage() {
   const { settings, updateSettings, setNavigationConfirmationDisabled } = useAppStore();
@@ -44,6 +44,7 @@ export function DictationPage() {
   const [playbackComplete, setPlaybackComplete] = useState(false);
   const [checkingMode, setCheckingMode] = useState(false);
   const [checkIndex, setCheckIndex] = useState(0);
+  const [hasStartedChecking, setHasStartedChecking] = useState(false);
 
   // 计时器和音频引用
   const playTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -277,6 +278,7 @@ export function DictationPage() {
     setCurrentWordIndex(0);
     setCheckingMode(false);
     setCheckIndex(0);
+    setHasStartedChecking(false);
     // 停止当前音频
     if (currentAudioRef.current) {
       currentAudioRef.current.pause();
@@ -302,7 +304,7 @@ export function DictationPage() {
   // 播放单个字母（使用本地 mp3 文件）
   const playLetter = (letter: string): Promise<void> => {
     return new Promise((resolve, reject) => {
-      if (shouldStopRef.current || isPaused) {
+      if (shouldStopRef.current || isPausedRef.current) {
         resolve();
         return;
       }
@@ -359,12 +361,12 @@ export function DictationPage() {
     await playWord(word);
     await waitWithPauseCheck(1000);
 
-    if (isPaused) return;
+    if (isPausedRef.current) return;
 
     // 再逐字母朗读（只播放字母，忽略非字母字符）
     const letters = word.word.split("").filter(char => /[a-zA-Z]/.test(char));
     for (const letter of letters) {
-      if (shouldStopRef.current || isPaused) return;
+      if (shouldStopRef.current || isPausedRef.current) return;
       await playLetter(letter);
       // 字母间隔
       await waitWithPauseCheck(Math.round(settings.letterInterval * 1000));
@@ -374,6 +376,7 @@ export function DictationPage() {
   // 开始校对播放
   const startChecking = async () => {
     shouldStopRef.current = false;
+    setHasStartedChecking(true);
     setIsPlaying(true);
     setPlaybackComplete(false);
     setCheckingMode(true);
@@ -469,7 +472,7 @@ export function DictationPage() {
 
           {/* 控制按钮 */}
           <div className="flex justify-center gap-4">
-            {!isPlaying && !playbackComplete && (
+            {!isPlaying && !playbackComplete && !hasStartedChecking && (
               <>
                 <Button size="lg" onClick={startChecking}>
                   <Play className="h-5 w-5 mr-2" />
@@ -547,6 +550,7 @@ export function DictationPage() {
           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>单词列表</DialogTitle>
+              <DialogDescription>按听写顺序显示所有单词</DialogDescription>
             </DialogHeader>
             <div className="mt-4">
               <table className="w-full">
@@ -862,6 +866,7 @@ export function DictationPage() {
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>单词列表</DialogTitle>
+            <DialogDescription>按听写顺序显示所有单词</DialogDescription>
           </DialogHeader>
           <div className="mt-4">
             <table className="w-full">

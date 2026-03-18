@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { ThemeProvider } from "@/components/theme-provider";
 import { InitThemeClient } from "@/components/init-theme-client";
 import { Layout } from "@/components/layout";
 
@@ -20,15 +19,8 @@ export default function RootLayout({
   return (
     <html lang="zh-CN" suppressHydrationWarning>
       <body className={inter.className}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="green"
-          enableSystem={false}
-          disableTransitionOnChange
-        >
-          <InitThemeClient />
-          <Layout>{children}</Layout>
-        </ThemeProvider>
+        <InitThemeClient />
+        <Layout>{children}</Layout>
       </body>
     </html>
   );
