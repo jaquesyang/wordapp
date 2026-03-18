@@ -1,8 +1,8 @@
 services:
   nextjs:
     build:
-      context: ./nextjs
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: nextjs/Dockerfile
     container_name: wordapp-nextjs
     ports:
       - "8100:3000"

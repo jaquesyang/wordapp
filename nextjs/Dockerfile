@@ -1,16 +1,20 @@
 # Next.js Dockerfile (Multi-stage build)
+# Build context should be the parent directory (git root)
 FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json package-lock.json ./
+# Copy package files from nextjs directory
+COPY nextjs/package.json nextjs/package-lock.json ./
 
 # Install dependencies
 RUN npm ci
 
-# Copy source code
-COPY . .
+# Copy source code from nextjs directory
+COPY nextjs/ ./
+
+# Copy database file to the location expected by the app
+COPY wordapp.db /wordapp.db
 
 # Build the application
 RUN npm run build
