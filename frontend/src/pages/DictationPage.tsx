@@ -9,8 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronLeft, Play, Pause, RotateCcw, Volume2 } from "lucide-react";
+import { ChevronLeft, Play, Pause, RotateCcw, Volume2, List } from "lucide-react";
 import type { Word } from "@/types";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export function DictationPage() {
   const { settings, updateSettings, setNavigationConfirmationDisabled } = useAppStore();
@@ -49,6 +50,11 @@ export function DictationPage() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const shouldStopRef = useRef<boolean>(false);
+  const isPausedRef = useRef<boolean>(false);
+
+  // 单词列表模态窗口状态
+  const [showWordListDialog, setShowWordListDialog] = useState(false);
+  const [playingWordId, setPlayingWordId] = useState<number | null>(null);
 
   // 控制导航确认：设置阶段或校对模式时不需要确认，听写过程中需要确认
   useEffect(() => {
@@ -56,20 +62,40 @@ export function DictationPage() {
     return () => setNavigationConfirmationDisabled(false);
   }, [isSetup, checkingMode]);
 
+  // 同步isPaused到ref，以便在异步函数中获取最新值
+  useEffect(() => {
+    isPausedRef.current = isPaused;
+  }, [isPaused]);
+
   // 获取单词列表
   const getWordList = async () => {
     if (selectedUnits.length === 0) return;
 
     const unitsParam = selectedUnits.join(",");
     let url = `${import.meta.env.VITE_API_BASE_URL}/words/random?grade=${settings.currentGrade}&units=${unitsParam}`;
-    if (wordCount !== "all") {
-      url += `&count=${wordCount}`;
-    }
+    // 无论是否选择all，都发送实际的count值
+    const count = wordCount === "all" ? totalWordCount : parseInt(wordCount);
+    url += `&count=${count}`;
     const response = await fetch(url);
     const data = await response.json();
     setWordList(data);
     setCurrentWordIndex(0);
     setIsSetup(false);
+  };
+
+  // 播放单词发音（用于单词列表）
+  const playWordAudio = async (word: Word) => {
+    setPlayingWordId(word.id);
+    try {
+      const audioUrl = `${import.meta.env.VITE_API_BASE_URL}/audio/proxy?word=${encodeURIComponent(word.word)}&type=${settings.audioType === "uk" ? "1" : "2"}`;
+      const audio = new Audio(audioUrl);
+      audio.onended = () => setPlayingWordId(null);
+      audio.onerror = () => setPlayingWordId(null);
+      await audio.play();
+    } catch (error) {
+      console.error("音频播放失败:", error);
+      setPlayingWordId(null);
+    }
   };
 
   // 处理单元选择
@@ -125,7 +151,7 @@ export function DictationPage() {
       audio.addEventListener('error', onError);
 
       // 检查是否应该停止
-      if (shouldStopRef.current || isPaused) {
+      if (shouldStopRef.current || isPausedRef.current) {
         cleanup();
         resolve();
         return;
@@ -143,7 +169,7 @@ export function DictationPage() {
     return new Promise<void>((resolve) => {
       const startTime = Date.now();
       const checkInterval = setInterval(() => {
-        if (isPaused) {
+        if (isPausedRef.current) {
           clearInterval(checkInterval);
           resolve();
         } else if (Date.now() - startTime >= ms) {
@@ -167,7 +193,7 @@ export function DictationPage() {
     const startIndex = currentWordIndex;
     for (let i = startIndex; i < wordList.length; i++) {
       // 检查是否应该停止
-      if (shouldStopRef.current || isPaused) {
+      if (shouldStopRef.current || isPausedRef.current) {
         setIsPlaying(false);
         return;
       }
@@ -179,17 +205,17 @@ export function DictationPage() {
         await playWord(wordList[i]);
 
         // 检查是否暂停
-        if (isPaused) break;
+        if (isPausedRef.current) break;
 
         // 等待1秒
         await waitWithPauseCheck(1000);
-        if (isPaused) break;
+        if (isPausedRef.current) break;
 
         // 播放单词第二次
         await playWord(wordList[i]);
 
         // 检查是否暂停
-        if (isPaused) break;
+        if (isPausedRef.current) break;
 
         // 单词之间等待
         if (i < wordList.length - 1) {
@@ -212,8 +238,12 @@ export function DictationPage() {
       setIsPaused(false);
       setIsPlaying(true);
       shouldStopRef.current = false;
-      // 从当前位置继续播放
-      startPlayback();
+      // 根据模式调用相应的播放函数
+      if (checkingMode) {
+        startChecking();
+      } else {
+        startPlayback();
+      }
     } else {
       // 暂停
       shouldStopRef.current = true;
@@ -309,7 +339,7 @@ export function DictationPage() {
       audio.addEventListener('error', onError);
 
       // 检查是否应该停止
-      if (shouldStopRef.current || isPaused) {
+      if (shouldStopRef.current || isPausedRef.current) {
         cleanup();
         resolve();
         return;
@@ -350,7 +380,7 @@ export function DictationPage() {
     // 从当前位置开始播放
     const startIndex = checkIndex;
     for (let i = startIndex; i < wordList.length; i++) {
-      if (shouldStopRef.current || isPaused) {
+      if (shouldStopRef.current || isPausedRef.current) {
         setIsPlaying(false);
         return;
       }
@@ -361,7 +391,7 @@ export function DictationPage() {
         // 播放单词和字母
         await playCurrentWordSpelling(wordList[i]);
 
-        if (isPaused) break;
+        if (isPausedRef.current) break;
 
         // 单词之间等待
         if (i < wordList.length - 1) {
@@ -424,10 +454,14 @@ export function DictationPage() {
           {/* 播放动画 */}
           <div className="flex justify-center items-center py-16">
             <div className="relative">
-              <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping" style={{ animationDuration: '1.5s' }} />
-              <div className="absolute inset-0 bg-primary/30 rounded-full animate-ping" style={{ animationDuration: '1.5s', animationDelay: '0.3s' }} />
+              {isPlaying && (
+                <>
+                  <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping" style={{ animationDuration: '1.5s' }} />
+                  <div className="absolute inset-0 bg-primary/30 rounded-full animate-ping" style={{ animationDuration: '1.5s', animationDelay: '0.3s' }} />
+                </>
+              )}
               <div className="relative w-32 h-32 bg-primary/10 rounded-full flex items-center justify-center">
-                <Volume2 className="h-16 w-16 text-primary animate-pulse" />
+                <Volume2 className={`h-16 w-16 text-primary ${isPlaying ? 'animate-pulse' : ''}`} />
               </div>
             </div>
           </div>
@@ -435,28 +469,66 @@ export function DictationPage() {
           {/* 控制按钮 */}
           <div className="flex justify-center gap-4">
             {!isPlaying && !playbackComplete && (
-              <Button size="lg" onClick={startChecking}>
-                <Play className="h-5 w-5 mr-2" />
-                开始校对
-              </Button>
+              <>
+                <Button size="lg" onClick={startChecking}>
+                  <Play className="h-5 w-5 mr-2" />
+                  开始校对
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => setShowWordListDialog(true)}
+                >
+                  <List className="h-5 w-5 mr-2" />
+                  单词列表
+                </Button>
+              </>
             )}
             {isPlaying && !isPaused && (
-              <Button size="lg" onClick={handlePauseResume}>
-                <Pause className="h-5 w-5 mr-2" />
-                暂停
-              </Button>
+              <>
+                <Button size="lg" onClick={handlePauseResume}>
+                  <Pause className="h-5 w-5 mr-2" />
+                  暂停
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => setShowWordListDialog(true)}
+                >
+                  <List className="h-5 w-5 mr-2" />
+                  单词列表
+                </Button>
+              </>
             )}
             {isPaused && (
-              <Button size="lg" onClick={handlePauseResume}>
-                <Play className="h-5 w-5 mr-2" />
-                继续
-              </Button>
+              <>
+                <Button size="lg" onClick={handlePauseResume}>
+                  <Play className="h-5 w-5 mr-2" />
+                  继续
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => setShowWordListDialog(true)}
+                >
+                  <List className="h-5 w-5 mr-2" />
+                  单词列表
+                </Button>
+              </>
             )}
             {playbackComplete && !isPaused && (
               <>
                 <Button size="lg" onClick={handleRestart} variant="outline">
                   <RotateCcw className="h-5 w-5 mr-2" />
                   重新听写
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => setShowWordListDialog(true)}
+                >
+                  <List className="h-5 w-5 mr-2" />
+                  单词列表
                 </Button>
                 <Button size="lg" onClick={() => {
                   setIsSetup(true);
@@ -468,6 +540,62 @@ export function DictationPage() {
             )}
           </div>
         </div>
+
+        {/* 单词列表模态窗口 */}
+        <Dialog open={showWordListDialog} onOpenChange={setShowWordListDialog}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>单词列表</DialogTitle>
+            </DialogHeader>
+            <div className="mt-4">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-2 px-3 font-medium text-sm text-muted-foreground w-16">
+                      序号
+                    </th>
+                    <th className="text-left py-2 px-3 font-medium text-sm text-muted-foreground">
+                      单词
+                    </th>
+                    <th className="text-left py-2 px-3 font-medium text-sm text-muted-foreground">
+                      音标
+                    </th>
+                    <th className="text-left py-2 px-3 font-medium text-sm text-muted-foreground">
+                      中文
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {wordList.map((word, index) => (
+                    <tr key={word.id} className="border-b border-border/50">
+                      <td className="py-3 px-3 text-muted-foreground text-sm">
+                        {index + 1}
+                      </td>
+                      <td
+                        className="py-3 px-3 text-card-foreground cursor-pointer hover:bg-accent/50 rounded"
+                        onClick={() => playWordAudio(word)}
+                      >
+                        {word.word}
+                        {playingWordId === word.id && (
+                          <Volume2 className="h-3 w-3 inline ml-1 text-primary animate-pulse" />
+                        )}
+                      </td>
+                      <td
+                        className="py-3 px-3 text-muted-foreground text-sm cursor-pointer hover:bg-accent/50 rounded"
+                        onClick={() => playWordAudio(word)}
+                      >
+                        {word.phonetic}
+                      </td>
+                      <td className="py-3 px-3 text-sm text-card-foreground">
+                        {word.chinese_definition}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
@@ -515,10 +643,10 @@ export function DictationPage() {
                 </Label>
                 <Select value={wordCount} onValueChange={setWordCount}>
                   <SelectTrigger id="dictation-word-count-select" className="w-full">
-                    <SelectValue />
+                    <SelectValue placeholder="选择数量" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">全部</SelectItem>
+                    <SelectItem value="all">全部 ({totalWordCount} 个)</SelectItem>
                     <SelectItem value="10">10</SelectItem>
                     <SelectItem value="20">20</SelectItem>
                     <SelectItem value="30">30</SelectItem>
@@ -669,11 +797,15 @@ export function DictationPage() {
         <div className="flex justify-center items-center py-16">
           <div className="relative">
             {/* 外圈波纹 */}
-            <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping" style={{ animationDuration: '1.5s' }} />
-            <div className="absolute inset-0 bg-primary/30 rounded-full animate-ping" style={{ animationDuration: '1.5s', animationDelay: '0.3s' }} />
+            {isPlaying && !isPaused && (
+              <>
+                <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping" style={{ animationDuration: '1.5s' }} />
+                <div className="absolute inset-0 bg-primary/30 rounded-full animate-ping" style={{ animationDuration: '1.5s', animationDelay: '0.3s' }} />
+              </>
+            )}
             {/* 中心图标 */}
             <div className="relative w-32 h-32 bg-primary/10 rounded-full flex items-center justify-center">
-              <Volume2 className="h-16 w-16 text-primary animate-pulse" />
+              <Volume2 className={`h-16 w-16 text-primary ${isPlaying && !isPaused ? 'animate-pulse' : ''}`} />
             </div>
           </div>
         </div>
@@ -703,16 +835,82 @@ export function DictationPage() {
           )}
           {/* 播放完成 - 显示进入校对模式按钮 */}
           {playbackComplete && !isPaused && (
-            <Button size="lg" onClick={() => {
-              setCheckingMode(true);
-              setCheckIndex(0);
-              startChecking();
-            }}>
-              开始校对
-            </Button>
+            <>
+              <Button size="lg" onClick={() => {
+                setCheckingMode(true);
+                setCheckIndex(0);
+                startChecking();
+              }}>
+                开始校对
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                onClick={() => setShowWordListDialog(true)}
+              >
+                <List className="h-5 w-5 mr-2" />
+                单词列表
+              </Button>
+            </>
           )}
         </div>
       </div>
+
+      {/* 单词列表模态窗口 */}
+      <Dialog open={showWordListDialog} onOpenChange={setShowWordListDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>单词列表</DialogTitle>
+          </DialogHeader>
+          <div className="mt-4">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-left py-2 px-3 font-medium text-sm text-muted-foreground w-16">
+                    序号
+                  </th>
+                  <th className="text-left py-2 px-3 font-medium text-sm text-muted-foreground">
+                    单词
+                  </th>
+                  <th className="text-left py-2 px-3 font-medium text-sm text-muted-foreground">
+                    音标
+                  </th>
+                  <th className="text-left py-2 px-3 font-medium text-sm text-muted-foreground">
+                    中文
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {wordList.map((word, index) => (
+                  <tr key={word.id} className="border-b border-border/50">
+                    <td className="py-3 px-3 text-muted-foreground text-sm">
+                      {index + 1}
+                    </td>
+                    <td
+                      className="py-3 px-3 text-card-foreground cursor-pointer hover:bg-accent/50 rounded"
+                      onClick={() => playWordAudio(word)}
+                    >
+                      {word.word}
+                      {playingWordId === word.id && (
+                        <Volume2 className="h-3 w-3 inline ml-1 text-primary animate-pulse" />
+                      )}
+                    </td>
+                    <td
+                      className="py-3 px-3 text-muted-foreground text-sm cursor-pointer hover:bg-accent/50 rounded"
+                      onClick={() => playWordAudio(word)}
+                    >
+                      {word.phonetic}
+                    </td>
+                    <td className="py-3 px-3 text-sm text-card-foreground">
+                      {word.chinese_definition}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

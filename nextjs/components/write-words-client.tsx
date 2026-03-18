@@ -76,9 +76,9 @@ export function WriteWordsClient({ grade, units }: WriteWordsClientProps) {
 
     const unitsParam = selectedUnits.join(',');
     let url = `/api/words/random?grade=${grade}&units=${unitsParam}`;
-    if (wordCount !== 'all') {
-      url += `&count=${wordCount}`;
-    }
+    // 无论是否选择all，都发送实际的count值
+    const count = wordCount === 'all' ? totalWordCount : parseInt(wordCount);
+    url += `&count=${count}`;
     const response = await fetch(url);
     const data = await response.json();
     setWordList(data);
@@ -387,10 +387,12 @@ export function WriteWordsClient({ grade, units }: WriteWordsClientProps) {
               </Label>
               <Select value={wordCount} onValueChange={setWordCount}>
                 <SelectTrigger id="word-count-select" className="w-full">
-                  <SelectValue />
+                  <SelectValue>
+                    {wordCount === 'all' ? `全部 (${totalWordCount} 个)` : wordCount}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">全部</SelectItem>
+                  <SelectItem value="all">全部 ({totalWordCount} 个)</SelectItem>
                   <SelectItem value="10">10</SelectItem>
                   <SelectItem value="20">20</SelectItem>
                   <SelectItem value="30">30</SelectItem>
