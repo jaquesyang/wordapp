@@ -1,5 +1,7 @@
 # Word Learning App (单词学习应用)
 
+> **All written by AI**
+
 A web-based word learning application for practicing vocabulary through multiple learning modes.
 
 This project includes two implementation options:
